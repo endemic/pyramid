@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Pyramid | Ganbaru Games</title>
+
+  <link rel="stylesheet" href="stylesheets/main.css">
+
+  <meta name="theme-color" content="#00aa55" media="(orientation: landscape)">
+  <meta name="theme-color" content="#ffffff" media="(orientation: portrait)">
+
+  <link rel="icon" type="image/png" sizes="48x48" href="metadata/images/favicon-48x48.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="metadata/images/apple-touch-icon.png">
+
+  <link rel="manifest" href="metadata/app.webmanifest">
+
+  <meta property="og:title" content="Pyramid" />
+  <meta property="og:description" content="Waste even moar time on the internet with this Pyramid clone." />
+  <meta property="og:url" content="https://ganbaru.games/pyramid" />
+  <meta property="og:image" content="metadata/images/android-chrome-512x512.png" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+
+  <script src="scripts/ios-pwa-splash.js"></script>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Pyramid" />
+</head>
+<body>
+  <script>
+    iosPWASplash('metadata/images/splash.png', 'black');
+  </script>
+
+  <canvas id="canvas"></canvas>
+
+  <section id="menu">
+    <button id="deal_button">Deal</button>
+    <button id="undo_button">Undo</button>
+    <button id="about_button">About</button>
+  </section>
+
+  <section id="status">
+    <span id="time">Time: 0</span>
+    <span id="score">Score: 0</span>
+  </section>
+
+  <section id="about">
+    <main>
+      <h1>
+        <div class="close"><span class="bar"></span></div>
+        About Pyramid
+      </h1>
+
+      <div class="content">
+        <img src="metadata/images/android-chrome-192x192.png" alt="Pyramid icon">
+
+        <div class="description">
+          <p>Developed by Nathan Demick. Inspired by Wes Cherry's
+            version of Solitaire for Windows. <a href="https://en.wikipedia.org/wiki/Microsoft_Solitaire" title="Read more on Wikipedia" targe="_blank">Read more on Wikipedia</a></p>
+
+          <form action="get" id="options">
+            <fieldset>
+              <legend>Options</legend>
+              <label for="card-draw-3">
+                <input type="radio" name="cardDraw" id="card-draw-3" value="3" autocomplete="off" checked>
+                3 card draw
+              </label>
+              <br>
+              <label for="card-draw-1">
+                <input type="radio" name="cardDraw" id="card-draw-1" value="1" autocomplete="off">
+                1 card draw
+              </label>
+            </fieldset>
+          </form>
+
+          <h3>Statistics</h3>
+
+          <ul>
+            <li>Games played: <span id="playedGames">0</span></li>
+            <li>Games won: <span id="wonGames">0</span></li>
+            <li>High score: <span id="highScore">0</span></li>
+          </ul>
+
+          <button id="reset">
+            <span class="text">Reset</span>
+          </button>
+        </div> <!-- /.description-->
+
+        <button id="return">
+          <span class="text">OK</span>
+        </button>
+      </div> <!-- /content-->
+    </main>
+  </section>
+
+  <script src="scripts/utils.js"></script>
+  <script src="scripts/card.js"></script>
+  <script src="scripts/stack.js"></script>
+  <script src="scripts/grabbed.js"></script>
+  <script src="scripts/talon.js"></script>
+  <script src="scripts/waste.js"></script>
+  <script src="scripts/cascade.js"></script>
+  <script src="scripts/foundation.js"></script>
+  <script src="scripts/about.js"></script>
+  <script src="scripts/card-waterfall.js"></script>
+  <script src="scripts/game.js"></script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('scripts/service-worker.js')
+        .then(() => { log('Service Worker Registered'); });
+    }
+  </script>
+
+</body>
+</html>
