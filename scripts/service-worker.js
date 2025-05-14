@@ -3,11 +3,13 @@ self.addEventListener('install', e => {
       caches.open('freecell').then(cache => cache.addAll([
           '../stylesheets/main.css',
           '../index.html',
-          '../about.html',
+          '../fonts/generic-mobile-system.woff2',
 
-          '../images/other/cell.png',
-          '../images/other/foundation.png',
           '../images/other/card-back.png',
+          '../images/other/foundation.png',
+          '../images/other/talon.png',
+          '../images/other/talon-end.png',
+          '../images/other/waste.png',
 
           '../images/clubs/ace.png',
           '../images/clubs/two.png',
@@ -65,16 +67,17 @@ self.addEventListener('install', e => {
           '../images/diamonds/queen.png',
           '../images/diamonds/king.png',
 
-          '../scripts/card-waterfall.js',
-          '../scripts/card.js',
-          '../scripts/cascade.js',
-          '../scripts/cell.js',
-          '../scripts/foundation.js',
+          '../scripts/cards/card-waterfall.js',
+          '../scripts/cards/card.js',
+          '../scripts/cards/cascade.js',
+          '../scripts/cards/foundation.js',
+          '../scripts/cards/grabbed.js',
+          '../scripts/cards/stack.js',
+          '../scripts/cards/talon.js',
+          '../scripts/cards/waste.js',
           '../scripts/game.js',
-          '../scripts/grabbed.js',
           '../scripts/ios-pwa-splash.js',
           // not necessary to cache the service worker script itself
-          '../scripts/stack.js'
       ])),
   );
 });

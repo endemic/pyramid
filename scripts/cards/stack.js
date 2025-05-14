@@ -18,6 +18,13 @@ class Stack {
   // dynamically set by `Game.onResize`
   offset = null;
 
+  // constructor() {
+  //   // temporarily create element for visual debugging
+  //   this.element = document.createElement('img');
+  //   this.element.classList.add('waste');
+  //   this.element.src = 'images/other/waste.png';
+  // }
+
   get stack() {
     return this;
   }
@@ -107,9 +114,11 @@ class Stack {
     this.width = width;
     this.height = height;
 
-    this.element.style.width = `${this.width}px`;
-    this.element.style.height = `${this.height}px`;
-
+    if (this.element) {
+      this.element.style.width = `${this.width}px`;
+      this.element.style.height = `${this.height}px`;
+    }
+    
     log(`setting ${this.type} size: ${width}, ${height}`);
   }
 

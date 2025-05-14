@@ -18,6 +18,14 @@ class Talon extends Stack {
     };
   }
 
+  set drawCount(n) {
+    if (n === 1) {
+      this.element.src = 'images/other/talon-end.png';
+    } else {
+      this.element.src = 'images/other/talon.png';
+    }
+  }
+
   set size({width, height}) {
     this.width = width;
     this.height = height;
@@ -25,7 +33,7 @@ class Talon extends Stack {
     this.element.style.width = `${this.width}px`;
     this.element.style.height = `${this.height}px`;
 
-    console.log(`setting ${this.type} size: ${width}, ${height}`);
+    log(`setting ${this.type} size: ${width}, ${height}`);
   }
 
   moveTo(x, y) {
@@ -43,7 +51,7 @@ class Talon extends Stack {
   // debug method to check order of cards
   get printCards() {
     for (let card of this.children()) {
-      console.log(card.toString());
+      log(card.toString());
     }
   }
 }

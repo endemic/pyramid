@@ -39,21 +39,12 @@ const hideAboutScreen = e => {
 };
 
 const setCardDraw = e => {
-  e.preventDefault();
+  // these might not be needed?
+  // e.preventDefault();
+  // e.target.checked = true;
 
-  const newDrawCount = parseInt(e.target.value, 10);
-  // TODO: the radio input is checked even if this condition returns early
-  if (!gameOver && drawCount !== newDrawCount && !confirm('Deal new game with changes?')) {
-    return;
-  }
-
-  drawCount = newDrawCount;
-  localStorage.setItem('pyramid:drawCount', newDrawCount);
-  e.target.checked = true;
-
-  // setting `firstGame` bypasses a confirmation check in `onDeal`
-  firstGame = true;
-  onDeal(e);
+  const drawCount = parseInt(e.target.value, 10);
+  localStorage.setItem('pyramid:drawCount', drawCount);
 };
 
 document.querySelectorAll('input[type=radio]').forEach(element => {

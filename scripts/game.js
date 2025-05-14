@@ -1,6 +1,6 @@
 const SUITS = ['hearts', 'spades', 'diamonds', 'clubs'];
 const RANKS = ['ace', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'jack', 'queen', 'king'];
-const DEBUG = false;
+const DEBUG = true;
 
 // used for custom double-click/tap implementation
 // this val is set in `onDown` function; if it is called again rapidly
@@ -26,24 +26,25 @@ let time = 0;
 let score = 0;
 
 // how many cards the player flips over at a time; can be 1 or 3
+// gets set every deal based on the radio button selected
 let drawCount = parseInt(localStorage.getItem('pyramid:drawCount'), 10) || 3;
 
-const cascades = [];
-for (let i = 0; i < 7; i += 1) {
-  // these don't have a visible component,
-  // so we don't need to append them to the DOM
-  cascades.push(new Cascade());
+// 28 stacks for the pyramid
+// 1 row at top, 7 rows at bottom, 7 total rows
+const stacks = [];
+for (let i = 0; i < 28; i += 1) {
+  // temporarily adding a DOM element so we can see where these stacks are positioned
+  const stack = new Stack();
+  stack.index = i;  // custom property to track stack index
+  stacks.push(stack);
 }
 
-const foundations = [];
-for (let i = 0; i < 4; i += 1) {
-  const foundation = new Foundation();
-  foundations.push(foundation);
+// single foundation
+const foundation = new Foundation();
+// Make these visible by adding to DOM
+document.body.append(foundation.element);
 
-  // Make these visible by adding to DOM
-  document.body.append(foundation.element);
-}
-
+// still need multiple "wastes" to allow for 3 card draw
 const wastes = [];
 for (let i = 0; i < 3; i += 1) {
   const waste = new Waste();
@@ -59,7 +60,12 @@ for (let i = 0; i < 3; i += 1) {
 const talon = new Talon();
 document.body.append(talon.element);
 
+// need this to move cards to/from foundation
 const grabbed = new Grabbed();
+
+// With Pyramid, you don't drag/move cards, you click to select; if they add up to 13,
+// they are moved to the foundation
+const selected = [];
 
 // array to hold refs to each card obj
 const cards = [];
@@ -78,106 +84,73 @@ SUITS.forEach(suit => {
   });
 });
 
-if (DEBUG) {
-  for (let i = 0; i < foundations.length; i += 1) {
-    let foundation = foundations[i];
+const addToScore = points => {
+  score += points;
 
-    // move all cards to winning positions
-    for (let j = 0; j < 13; j += 1) {
-      let card = cards[(13 * i) + j];
-      card.flip();
-      let parent = foundation.lastCard;
-      card.setParent(parent);
-      card.moveTo(parent.x, parent.y);
-    }
-  }
-}
-
-const addToScore = p => {
-  score += p;
+  const scoreElement = document.querySelector('#score');
+  scoreElement.textContent = `Score: ${score}`;
 
   if (score < 0) {
-    score = 0;
+    scoreElement.style.color = 'red';
+  } else {
+    scoreElement.style.color = 'black';
   }
-
-  document.querySelector('#score').textContent = `Score: ${score}`;
 };
 
-const checkWin = () => {
-  // ensure that each foundation has 13 cards; we don't check for matching suit
-  // or ascending rank because those checks are done when the card is played
-  return foundations.every(f => {
-    let count = 0;
+// ensure all stacks no longer contain cards
+const checkWin = () => !stacks.some(s => s.hasCards);
 
-    for (let _card of f.children()) {
-      count += 1;
-    }
+const moveToFoundation = async cards => {
+  const undoGroup = [];
 
-    return count === 13;
+  cards.forEach(card => {
+    const parent = foundation.lastCard;  // either a card or the foundation itself
+    const points = 13;  // always get 13 points for playing on the foundation
+
+    addToScore(points);
+
+    undoGroup.push({
+      card,
+      parent,
+      oldParent: card.parent,
+      points
+    });
+
+    card.setParent(parent);
+    card.zIndex = 52; // ensure card doesn't animate _under_ others
+    card.animateTo(parent.x, parent.y);
+
+    // show a brief "flash" when the card is close to the foundation
+    wait(150).then(() => card.flash());
+
+    // Ensure card z-index is correct _after_ it animates
+    wait(250).then(() => card.resetZIndex());
+
+    log(`playing ${card} on foundation`);
   });
-};
 
-const attemptToPlayOnFoundation = async card => {
-  for (let i = 0; i < foundations.length; i += 1) {
-    const foundation = foundations[i];
+  undoStack.push(undoGroup);
 
-    if (foundation.validPlay(card)) {
-      const parent = foundation.lastCard;  // either a card or the foundation itself
-      const points = 10;  // always get 10 points for playing on a foundation
+  if (checkWin()) {
+    gameOver = true;
 
-      addToScore(points);
+    // increment games won counter
+    let wonGames = parseInt(localStorage.getItem('pyramid:wonGames'), 10) || 0;
+    localStorage.setItem('pyramid:wonGames', wonGames + 1);
 
-      undoStack.push({
-        card,
-        parent,
-        oldParent: card.parent,
-        points
-      });
-
-      card.setParent(parent);
-      card.zIndex = 52; // ensure card doesn't animate _under_ others
-      card.animateTo(parent.x, parent.y);
-
-      // show a brief "flash" when the card is close to the foundation
-      wait(150).then(() => card.flash());
-
-      // Ensure card z-index is correct _after_ it animates
-      wait(250).then(() => card.resetZIndex());
-
-      log(`playing ${card} on foundation #${i}`);
-
-      if (checkWin()) {
-        gameOver = true;
-
-        // increment games won counter
-        let key = 'pyramid:wonGames';
-        let wonGames = parseInt(localStorage.getItem(key), 10) || 0;
-        localStorage.setItem(key, wonGames + 1);
-
-        // add bonus time points to score
-        if (time >= 30) {
-          addToScore(Math.round(700000 / time));
-        }
-
-        // check for high score
-        key = 'pyramid:highScore';
-        let highScore = parseInt(localStorage.getItem(key), 10) || 0;
-        if (score > highScore) {
-          localStorage.setItem(key, score);
-        }
-
-        // wait for animation to finish
-        await waitAsync(250);
-
-        CardWaterfall.start(() => {
-          reset();
-          stackCards();
-        });
-      }
-
-      // if we have a valid play, return from this function;
-      return;
+    // check for high score
+    let highScore = parseInt(localStorage.getItem('pyramid:highScore'), 10) || 0;
+    if (score > highScore) {
+      localStorage.setItem('pyramid:highScore', score);
     }
+
+    // wait for animation to finish
+    await waitAsync(250);
+
+    CardWaterfall.start(() => {
+      reset();
+      stackCards();
+    });
   }
 };
 
@@ -189,8 +162,8 @@ const reset = () => {
     c.invert(false);
   });
 
-  cascades.forEach(c => c.child = null);
-  foundations.forEach(f => f.child = null);
+  stacks.forEach(c => c.child = null);
+  foundation.child = null
   wastes.forEach(w => w.child = null);
   talon.child = null;
 
@@ -227,33 +200,17 @@ const stackCards = () => {
 };
 
 const deal = async () => {
-  const lastCascade = cascades[cascades.length - 1];
-  let index = 0;
-
-  // the last cascade should have 7 cards when all are dealt
-  while (lastCascade.cardCount < 7) {
+  // deal one face up card to each stack
+  for (let i = 0; i < stacks.length; i += 1) {
     const card = talon.lastCard;
-    const cascade = cascades[index];
+    const stack = stacks[i];
+    const parent = stack.lastCard;
 
-    if (cascade.cardCount === index + 1) {
-      index = index + 1 >= cascades.length ? 0 : index + 1;
-      log(`going to next cascade: ${index}`);
-      continue;
-    }
-
-    // offset for dropping face up cards is handled by the `Grabbed` class
-    let offset = cascade.cardCount === 0 ? 0 : card.offset;
-    let lastCard = cascade.lastCard;
-    card.setParent(lastCard);
-    card.animateTo(lastCard.x, lastCard.y + offset, 600);
-    wait(200).then(() => card.zIndex = lastCard.zIndex + 1);
-
-    if (cascade.cardCount === index + 1) {
-      card.flip();
-    }
-
+    card.setParent(parent);
+    card.animateTo(parent.x, parent.y, 600);
+    wait(200).then(() => card.zIndex = parent.zIndex + 1);
+    card.flip();
     await waitAsync(75);
-    index = index + 1 >= cascades.length ? 0 : index + 1;
   }
 
   // increment games played counter
@@ -261,11 +218,22 @@ const deal = async () => {
   let playedGames = parseInt(localStorage.getItem(key), 10) || 0;
   localStorage.setItem(key, playedGames + 1);
 
+  // set draw count
+  drawCount = parseInt(localStorage.getItem('pyramid:drawCount'), 10) || 3;
+
+  // change the base talon image from green "O" to red "X", etc.
+  talon.drawCount = drawCount;
+
   gameOver = false;
 };
 
 const resetTalon = e => {
   e.preventDefault();
+
+  // can only cycle talon _once_ with single card draw
+  if (drawCount === 1) {
+    return;
+  }
 
   // need a way to group multiple "actions" as a single group in order to undo
   // if `undo` method finds an array, it will process each of the elements
@@ -295,6 +263,7 @@ const resetTalon = e => {
   }
 
   // when playing single card draw, recycling the waste loses you points
+  // TODO: still need this?
   const points = drawCount === 1 ? -100 : 0;
 
   addToScore(points);
@@ -317,18 +286,7 @@ cards.forEach(card => {
       return;
     }
 
-    const point = getPoint(e);
-    const delta = Date.now() - lastOnDownTimestamp;
-    const doubleClick = delta < 500 && dist(point, previousPoint) < 15;
     const stack = card.stack;
-
-    log(`double-click: ${doubleClick}; delta: ${delta}`);
-
-    // reset the timestamp that stores the last time the player clicked
-    // if the current click counts as "double", then set the timestamp way in the past
-    // otherwise you get a "3 click double click" because the 2nd/3rd clicks are too close together
-    lastOnDownTimestamp = doubleClick ? 0 : Date.now();
-    previousPoint = point;
 
     if (stack.type === 'talon') {
       // NOTE: win3 solitaire only allows a single undo!
@@ -402,193 +360,85 @@ cards.forEach(card => {
     if (stack.type === 'waste') {
       for (let i = wastes.length - 1; i >= 0; i -= 1) {
         if (wastes[i] === stack) {
-          console.log(`no need to keep checking if cards are "above" clicked waste`);
+          log(`no need to keep checking if cards are "above" clicked waste`);
           break;
         }
 
         if (wastes[i].hasCards) {
-          console.log(`waste ${i} still has cards`);
+          log(`waste ${i} still has cards`);
           return;
         }
       }
     }
 
-    if (!card.faceUp && card.hasCards) {
-      log(`can't pick up a card stack that's not face up`);
+    log(`card index: ${card.stack.index}`);
+
+    // only allow cards in lower rows to be selected if they are not covered by other cards
+    // theoretical algorithm: add the number of cards in the row to the index; that card +1
+    const child1 = stacks[stack.index + stack.row + 1];
+    const child2 = stacks[stack.index + stack.row + 2];
+    if (child1 && child2 && (child1.hasCards || child2.hasCards)) {
+      log(`can't pick up ${card}, ${[child1.lastCard, child2.lastCard]} are in the way`);
+      return;
+    }
+    /*
+            0
+           1 2
+          3 4 5
+         6 7 8 9
+       10 11 12 13
+      14 15 16 17 18
+     19 20 21 22 23 24
+    25 26 27 28 29 30 31
+    */
+
+    // if card is already selected, remove it from the selected array
+    if (selected.includes(card)) {
+      const index = selected.indexOf(card);
+      selected.splice(index, 1);
+      card.invert(false);
+
+      // TODO: you can select a card, then a king, and then de-select the first card and the
+      // king will still be left selected and not played
       return;
     }
 
-    if (!card.faceUp && !card.hasCards) {
-      const points = 5;
-      const flip = true;
+    // select card
+    selected.push(card);
+    card.invert(true);
 
-      addToScore(points);
-
-      undoStack.push({
-        card,
-        flip,
-        points
-      });
-
-      card.flip();
-
-      return;
+    // max 2 cards can be selected at a time
+    if (selected.length > 2) {
+      // remove the first card from the selected array
+      const removed = selected.shift();
+      removed.invert(false);
     }
 
-    // can only double-click to play on a foundation
-    // if card is last in a cascade/cell
-    if (doubleClick && !card.hasCards && !card.animating) {
-      log(`double click! attempt to play ${card} on foundations`);
-      attemptToPlayOnFoundation(card);
-      return;
+    // check if cards add up to 13
+    const total = selected.reduce((acc, c) => {
+      const value = RANKS.indexOf(c.rank) + 1;
+      return acc + value;
+    }, 0);
+
+    log(`total value of selected cards: ${total}`);
+
+    if (total === 13) {
+      // move all selected cards to the foundation
+      moveToFoundation(selected);
+      selected.forEach(c => c.invert(false));
+      selected.length = 0; // empty the array
     }
-
-    // only allow alternating sequences of cards to be picked up
-    // TODO: can possibly remove this check
-    if (!card.childrenInSequence) {
-      console.log(`can't pick up ${card}, not a sequence!`);
-      return;
-    }
-
-    grabbed.grab(card);
-    grabbed.setOffset(point);
-
-    log(`onDown on ${card}, offset: ${point.x}, ${point.y}`);
   };
 
   card.element.addEventListener('mousedown', onDown);
   card.element.addEventListener('touchstart', onDown);
 });
 
-const onMove = e => {
-  e.preventDefault();
-
-  if (!grabbed.hasCards) {
-    return;
-  }
-
-  const point = getPoint(e);
-
-  grabbed.moveTo(point);
-};
-
-const onUp = async e => {
-  e.preventDefault();
-
-  if (!grabbed.hasCards) {
-    return;
-  }
-
-  const card = grabbed.child;
-
-  // check foundations
-  for (let i = 0; i < foundations.length; i += 1) {
-    const foundation = foundations[i];
-
-    // only allow placement in foundation if a valid play, and
-    // player is holding a single card
-    if (grabbed.overlaps(foundation) && foundation.validPlay(card) && !card.hasCards) {
-      const parent = foundation.lastCard;
-
-      // 10 points for putting card on foundation (from anywhere)
-      const points = 10;
-
-      addToScore(points);
-
-      undoStack.push({
-        card,
-        parent,
-        oldParent: card.parent,
-        points
-      });
-
-      grabbed.drop(parent); // either a card or the foundation itself
-      wait(150).then(() => card.flash());
-
-      console.log(`dropping ${card} on foundation #${i}`);
-
-      if (checkWin()) {
-        gameOver = true;
-
-        // increment games won counter
-        let key = 'pyramid:wonGames';
-        let wonGames = parseInt(localStorage.getItem(key), 10) || 0;
-        localStorage.setItem(key, wonGames + 1);
-
-        // add bonus time points to score
-        if (time >= 30) {
-          addToScore(Math.round(700000 / time));
-        }
-
-        // check for high score
-        key = 'pyramid:highScore';
-        let highScore = parseInt(localStorage.getItem(key), 10) || 0;
-        if (score > highScore) {
-          localStorage.setItem(key, score);
-        }
-
-        CardWaterfall.start(() => {
-          reset();
-          stackCards();
-        });
-      }
-
-      // valid play, so break out of the loop checking other foundations
-      return;
-    }
-  }
-
-  // check cascades
-  for (let i = 0; i < cascades.length; i += 1) {
-    const cascade = cascades[i];
-
-    if (grabbed.overlaps(cascade) && cascade.validPlay(card)) {
-      const parent = cascade.lastCard;
-      let points;
-
-      // -15 points if moving from foundation back down to cascade
-      // 5 points for moving from waste to cascade
-      switch (card.stack.type) {
-        case 'foundation':
-          points = -15;
-          break;
-        case 'waste':
-          points = 5;
-          break;
-        default:
-          points = 0;
-      }
-
-      addToScore(points);
-
-      undoStack.push({
-        card,
-        parent,
-        oldParent: card.parent,
-        points
-      });
-
-      grabbed.drop(parent);
-
-      log(`dropping ${card} on cascade #${i}`);
-
-      // valid play, so return out of the loop checking other cells
-      return;
-    }
-  }
-
-  // if we got this far, that means no valid move was made,
-  // so the card(s) can go back to their original position
-  log('invalid move; dropping card(s) on original position');
-
-  grabbed.drop();
-};
-
 const onResize = () => {
   const windowWidth = window.innerWidth;
   const windowHeight = window.innerHeight;
 
-  const aspectRatio = 4 / 3;
+  const aspectRatio = 1; // trying out a square layout
 
   // playable area, where cards will be drawn
   let tableauWidth;
@@ -606,41 +456,42 @@ const onResize = () => {
 
   const windowMargin = (windowWidth - tableauWidth) / 2;
 
-  // tweak these values as necessary
-  const margin = (7 / 609) * tableauWidth;
+  // debug tableau size for layout testing
+  // let tableauDebug = document.createElement('div');
+  // tableauDebug.style.width = `${tableauWidth}px`;
+  // tableauDebug.style.height = `${tableauHeight}px`;
+  // tableauDebug.style.backgroundColor = 'rgba(255, 0, 255, 0.5)';
+  // tableauDebug.style.position = 'absolute';
+  // tableauDebug.style.top = `0`;
+  // tableauDebug.style.left = `${windowMargin}px`;
+  // document.body.append(tableauDebug);
 
-  // if tableau is 608pt wide, then for 8 columns
-  // each column + margin should be 87
+  const widthInPixels = 600;
+  const heightInPixels = 600;
 
-  // cards are 80x115
-  const width = (80 / 609) * tableauWidth;
-  const height = (115 / 454) * tableauHeight;
-  const offset = height / 3.7; // ~31px
-  const faceDownOffset = height / 10; // ~11px
+  // set card sizes/margins here
+  const margin = (6 / widthInPixels) * tableauWidth; // arbitrary horiztonal margin between cards (6px)
+  const width = (80 / widthInPixels) * tableauWidth; // card width (80px)
+  const height = (115 / heightInPixels) * tableauHeight; // card height (115px)
+  const offset = (20 / heightInPixels) * tableauHeight; // arbitrary vertical diff between stacked cards
 
   // enumerate over all cards/stacks in order to set their width/height
-  for (const cascade of cascades) {
-    cascade.size = { width, height };
-    cascade.offset = offset;
-  }
-
-  for (const foundation of foundations) {
-    foundation.size = { width, height };
+  for (const stack of stacks) {
+    stack.size = { width, height };
   }
 
   for (const card of cards) {
     card.size = { width, height };
-    card.offset = faceDownOffset;
   }
 
   for (const waste of wastes) {
     waste.size = { width, height };
   }
 
+  // set width/height for single objects
+  foundation.size = { width, height };
   talon.size = { width, height };
-
   grabbed.size = { width, height };
-  grabbed.offset = offset;
 
   // Layout code
   const menu = document.querySelector('#menu');
@@ -650,25 +501,53 @@ const onResize = () => {
   menu.style.padding = `0 0 0 ${windowMargin}px`;
   status.style.padding = `0 ${windowMargin + margin}px`;
 
-  const top = margin + menu.offsetHeight;
-  const left = windowMargin + margin / 2;
+  // constants defining the drawable area in the tableau
+  const top = menu.offsetHeight;
+  const left = windowMargin;
 
-  talon.moveTo(windowWidth - windowMargin - margin / 2 - width, top);
+  talon.moveTo(
+    // right-most side of the screen, minus the extra horizontal window margin,
+    // minus the size of the card, minus the small left/right card margin
+    windowWidth - windowMargin - width - margin,
+    top + margin
+  );
 
   // wastes[0] is right next to the talon
   wastes.forEach((w, i) => {
-    w.moveTo(talon.x - (margin + width) - (offset / 1.5 * i), top);
+    w.moveTo(talon.x - (margin + width) - (offset / 1.5 * i), top + margin);
   });
 
-  // foundations on the left
-  foundations.forEach((f, i) => {
-    f.moveTo(left + (width + margin) * i, top);
-  });
+  // foundation on the left
+  foundation.moveTo(left + margin, top + margin);
 
-  cascades.forEach((c, i) => {
-    // allows space for foundations
-    c.moveTo(windowMargin + margin / 2 + (width + margin) * i, top + height + margin)
-  });
+  // put stacks in a pyramid shape
+  const center = left + (tableauWidth / 2) - (width / 2);
+
+  let index = 0;
+  // seven rows
+  for (let row = 0; row < 7; row += 1) {
+    // first row is 1 card, second row is 2 cards, etc.
+    for (let column = 0; column <= row; column += 1) {
+
+      log(`row ${row}, card ${column}, setting stack ${index}`);
+      const stack = stacks[index];
+
+      //set z-index so lower rows are on top
+      stack.zIndex = row;
+
+      // custom prop for row number;
+      // same as z-index, but not as obtuse
+      stack.row = row;
+
+      // this is crazy
+      stack.moveTo(
+        center - (row * (width / 2 + margin / 2)) + (column * (width + margin)),
+        top + (row * height / 2) + (row * offset / 2) + margin
+      );
+
+      index += 1;
+    }
+  }
 
   // Handle resizing <canvas> for card waterfall
   CardWaterfall.onResize(windowWidth, windowHeight);
@@ -763,11 +642,6 @@ const onUndo = e => {
 
   undo();
 };
-
-document.body.addEventListener('mousemove', onMove);
-document.body.addEventListener('touchmove', onMove);
-document.body.addEventListener('mouseup', onUp);
-document.body.addEventListener('touchend', onUp);
 
 window.addEventListener('resize', onResize);
 window.addEventListener('keydown', onKeyDown);

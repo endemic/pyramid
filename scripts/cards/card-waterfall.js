@@ -71,11 +71,13 @@ const CardWaterfall = {
   },
 
   nextCard() {
+    // TODO: should we make cards from waste/talon fall as well?
+    
     // randomly choose foundation & pick top card off it
-    let randomFoundationIndex = Math.floor(Math.random() * foundations.length);
-    let f = foundations[randomFoundationIndex];
+    // let randomFoundationIndex = Math.floor(Math.random() * foundations.length);
+    // let f = foundations[randomFoundationIndex];
 
-    while (!f.hasCards) {
+    while (!foundation.hasCards) {
       randomFoundationIndex = Math.floor(Math.random() * foundations.length);
       f = foundations[randomFoundationIndex];
 
@@ -85,7 +87,11 @@ const CardWaterfall = {
       }
     }
 
-    let card = f.lastCard;
+    if (!foundation.hasCards) {
+      return;
+    }
+
+    let card = foundation.lastCard;
 
     // detatch card
     card.parent.child = null;
@@ -142,9 +148,9 @@ const CardWaterfall = {
     fallingCard.velocity.y += canvasHeight * 0.001; // 0.1%
   },
 
-  get hasCards() {
-    return foundations.some(f => f.hasCards);
-  },
+  // get hasCards() {
+  //   return foundations.some(f => f.hasCards);
+  // },
 
   stop() {
     // stop listening for interaction
