@@ -289,10 +289,9 @@ cards.forEach(card => {
     const stack = card.stack;
 
     if (stack.type === 'talon') {
-      // NOTE: win3 solitaire only allows a single undo!
-      // its 3 card draw shows the last 3 cards; if you play those,
-      // then the rest are in a single pile beneath
 
+      // must have an array of multiple undo objects in the case of 3 card draw;
+      // 3 cards must be moved back to the talon
       const undoGroup = [];
 
       // move any cards in wastes[2]/wastes[1] to wastes[0]
@@ -327,6 +326,7 @@ cards.forEach(card => {
         card.zIndex = parent.zIndex + 1;
       }
 
+      // now move card(s) from talon to waste(s)
       for (let i = 0; i < drawCount; i += 1) {
         // we've run out of cards
         if (talon.cardCount === 0) {
@@ -355,7 +355,7 @@ cards.forEach(card => {
       return;
     }
 
-    // don't allow cards in waste to be picked up if there are
+    // don't allow cards in waste to be selected up if there are
     // cards in "higher" waste stacks
     if (stack.type === 'waste') {
       for (let i = wastes.length - 1; i >= 0; i -= 1) {
@@ -377,8 +377,18 @@ cards.forEach(card => {
     // theoretical algorithm: add the number of cards in the row to the index; that card +1
     const child1 = stacks[stack.index + stack.row + 1];
     const child2 = stacks[stack.index + stack.row + 2];
-    if (child1 && child2 && (child1.hasCards || child2.hasCards)) {
-      log(`can't pick up ${card}, ${[child1.lastCard, child2.lastCard]} are in the way`);
+
+    // allow a parent card to be selected if one of its child cards is selected
+    // this condition is a bit hairy, which is why it is split out
+    if (selected.length === 1 && (
+        (!child1?.hasCards && child2?.lastCard === selected[0]) ||
+        (!child2?.hasCards && child1?.lastCard === selected[0])
+      )
+  ) {
+      // continue
+    } else if (child1?.hasCards || child2?.hasCards) {
+      // otherwise, don't allow selection if there are one or two child cards
+      log(`can't pick up ${card}, ${[child1?.lastCard, child2?.lastCard]} are in the way`);
       return;
     }
     /*
@@ -397,30 +407,30 @@ cards.forEach(card => {
       const index = selected.indexOf(card);
       selected.splice(index, 1);
       card.invert(false);
-
-      // TODO: you can select a card, then a king, and then de-select the first card and the
-      // king will still be left selected and not played
+      log(`deselecting ${card}`);
       return;
+    } else if (selected.length === 1) {
+      // don't allow a second card to be selected if they don't add up to 13
+      const total = [...selected, card].reduce((acc, c) => {
+        const value = RANKS.indexOf(c.rank) + 1;
+        return acc + value;
+      }, 0);
+
+      if (total !== 13) {
+        log(`can't select 2nd card; they only add up to ${total}`);
+        return;
+      }
     }
 
     // select card
     selected.push(card);
     card.invert(true);
 
-    // max 2 cards can be selected at a time
-    if (selected.length > 2) {
-      // remove the first card from the selected array
-      const removed = selected.shift();
-      removed.invert(false);
-    }
-
     // check if cards add up to 13
     const total = selected.reduce((acc, c) => {
       const value = RANKS.indexOf(c.rank) + 1;
       return acc + value;
     }, 0);
-
-    log(`total value of selected cards: ${total}`);
 
     if (total === 13) {
       // move all selected cards to the foundation
@@ -456,15 +466,17 @@ const onResize = () => {
 
   const windowMargin = (windowWidth - tableauWidth) / 2;
 
-  // debug tableau size for layout testing
-  // let tableauDebug = document.createElement('div');
-  // tableauDebug.style.width = `${tableauWidth}px`;
-  // tableauDebug.style.height = `${tableauHeight}px`;
-  // tableauDebug.style.backgroundColor = 'rgba(255, 0, 255, 0.5)';
-  // tableauDebug.style.position = 'absolute';
-  // tableauDebug.style.top = `0`;
-  // tableauDebug.style.left = `${windowMargin}px`;
-  // document.body.append(tableauDebug);
+  // make tableau size visible for layout testing
+  if (false) {
+    let tableauDebug = document.createElement('div');
+    tableauDebug.style.width = `${tableauWidth}px`;
+    tableauDebug.style.height = `${tableauHeight}px`;
+    tableauDebug.style.backgroundColor = 'rgba(255, 0, 255, 0.5)';
+    tableauDebug.style.position = 'absolute';
+    tableauDebug.style.top = `0`;
+    tableauDebug.style.left = `${windowMargin}px`;
+    document.body.append(tableauDebug);
+  }
 
   const widthInPixels = 600;
   const heightInPixels = 600;
