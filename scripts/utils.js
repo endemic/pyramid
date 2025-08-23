@@ -31,3 +31,34 @@ const log = (...params) => {
     console.log(...params);
   }
 };
+
+const dialog = {
+  init: () => {
+    const element = document.querySelector('dialog#confirm');
+    element.addEventListener('close', () => {
+      if (element.returnValue !== 'yes') {
+        // user clicked outside the dialog or pressed escape
+        return;
+      }
+      dialog.onConfirm();
+    });
+  },
+  onConfirm: () => {
+    // default no-op
+  },
+  show: (message, onConfirmFunction) => {
+    const element = document.querySelector('dialog#confirm');
+    element.querySelector('#dialog-text').textContent = message;
+    element.showModal();
+
+    if (typeof onConfirmFunction === 'function') {
+      dialog.onConfirm = onConfirmFunction;
+    }
+  },
+
+  close: () => {
+    document.querySelector('dialog#confirm').close();
+  }
+};
+
+dialog.init();

@@ -123,32 +123,27 @@ button:active {
     }
   }
 
-#about {
-  display: none;
+dialog {
   background: navy;
   cursor: default;
   font-size: 1.5rem;
-  position: absolute;
-  left: 20%;
-  top: 20%;
-  width: 60%;
-  z-index: 53;
+  padding: 0;
+  border: 0;
 }
 
-#about main {
+dialog section {
   box-sizing: border-box;
   margin: 0.5rem;
   border: 2px solid white;
   background: white;
-  height: calc(100% - 1rem); /* such lazy */
   color: black;
 }
 
-#about main h1 {
+dialog section h1 {
   background: navy;
   border-bottom: 2px solid black;
   color: white;
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: normal;
   margin-top: 0;
   text-align: center;
@@ -156,15 +151,16 @@ button:active {
   line-height: 110%;
 }
 
-#about .close {
+dialog .close {
   background-color: lightgray;
   color: white;
   display: block;
   height: 100%;
   float: left;
-  width: 2.8rem;
+  width: 2.5rem;
 }
-#about .close .bar {
+
+dialog .close .bar {
   width: 50%;
   display: inline-block;
   height: 2px;
@@ -174,63 +170,100 @@ button:active {
   vertical-align: 0.5rem;
 }
 
-#about .content {
+dialog .content {
   padding: 0 1.5rem 1.5rem 1.5rem;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 2.5rem;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
 }
 
-#about .content img {
+dialog .content img {
   width: 6rem;
 }
 
-#about .content p {
+dialog .content p {
   margin-top: 0;
 }
 
-#about h3 {
+dialog form {
+  flex-basis: 100%;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+/* override the 1/3 card draw form */
+dialog form#options {
+  display: block;
+}
+
+dialog h3 {
   margin-bottom: 0.5rem;
   font-weight: normal;
 }
 
-#about ul {
+dialog ul {
   margin-top: 0;
 }
 
-#about button {
+dialog figure {
+  background-color: yellow;
+  border-radius: 5rem;
+  border: 0.15rem solid black;
+  display: inline-block;
+  font-size: 3rem;
+  font-weight: bold;
+  letter-spacing: -0.1rem;
+  line-height: 0.5rem;
+  margin: 0;
+  padding: 1.65rem 1.45rem 1.25rem 1.45rem;
+}
+
+dialog #dialog-text {
+  margin: 0;
+}
+
+dialog button {
   background-color: #bbbfc4;
   border-bottom: 0.25rem solid #7b7f83;
   border-left: 0.25rem solid #fff;
   border-radius: 0.1rem;
   border-right: 0.25rem solid #7b7f83;
   border-top: 0.25rem solid #fff;
-  box-shadow: 0 0 0 0.25rem #000;
+  box-shadow: 0 0 0 0.15rem #000;
   cursor: pointer;
-  min-width: 8rem;
+  font-size: 1.5rem;
   height: auto;
+  display: inline-block
 }
 
-#about button .text {
+dialog button .text {
   border: 2px solid #bbbfc4;
   display: inline-block;
 }
 
-#about button:hover {
+dialog button:hover, dialog button:focus-visible {
   background-color: #bbbfc4;
   color: #000;
+  outline: none;
+  box-shadow: 0 0 0 0.20rem #000;
 }
 
-#about button:hover .text {
+dialog button:hover .text {
   border: 2px dotted #7b7f83;
 }
 
-#about button:active {
+dialog button:active {
   border-bottom: 0.25rem solid #fff;
   border-left: 0.25rem solid #7b7f83;
   border-right: 0.25rem solid #fff;
   border-top: 0.25rem solid #7b7f83;
+}
+
+dialog button:focus-visible .text {
+  border: 2px dotted #7b7f83;
 }
 
 @media (orientation: portrait) {
@@ -245,13 +278,6 @@ button:active {
   #status {
     height: 5%;
     font-size: 4vh;
-  }
-
-  #about {
-    width: 100%;
-    height: 100%;
-    left: 0;
-    top: 0;
   }
 
   #about .content {

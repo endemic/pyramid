@@ -288,6 +288,11 @@ cards.forEach(card => {
 
     const stack = card.stack;
 
+    if (stack.type === 'foundation') {
+      // can't select cards on foundation
+      return;
+    }
+
     if (stack.type === 'talon') {
 
       // must have an array of multiple undo objects in the case of 3 card draw;
@@ -631,18 +636,22 @@ const onKeyDown = e => {
 const onDeal = async e => {
   e.preventDefault();
 
-  // when game first loads, we don't need to confirm
-  if (!firstGame && !confirm('New game?')) {
-    return;
+  // deal without confirmation the first time the game is loaded
+  if (firstGame) {
+    firstGame = false;
+
+    reset();
+    stackCards();
+    await waitAsync(10);
+    deal();
+  } else {
+    dialog.show('Deal again?', async () => {
+      reset();
+      stackCards();
+      await waitAsync(10);
+      deal();
+    });
   }
-
-  firstGame = false;
-
-  reset();
-  stackCards();
-  // wait for a hot (milli)second for cards to be moved back to the talon
-  await waitAsync(10);
-  deal();
 };
 
 const onUndo = e => {
